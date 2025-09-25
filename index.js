@@ -1,35 +1,46 @@
-
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const dotenv = require("dotenv");
+
+// Routes
+const authRoutes = require("./routes/auth.routes");
 const aiRoutes = require("./routes/ai.routes");
+const giftRoutes = require("./routes/gift.routes");
+const chatRoutes = require("./routes/chat.routes");
 
 dotenv.config();
 
 const app = express();
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 
-
-const allowedOrigins = process.env.CLIENT_URL
-  ? process.env.CLIENT_URL.split(",")
-  : [];
+// ✅ CORS Setup
+const allowedOrigins = [
+  "http://localhost:5173", // local dev
+  "https://love-ai-frontend-nzdq.vercel.app" // Vercel frontend
+];
 
 app.use(
   cors({
     origin: function (origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) {
+      // allow requests with no origin (like Postman or server-to-server)
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
+        console.warn("Blocked CORS request from origin:", origin);
         callback(new Error("Not allowed by CORS"));
       }
     },
-    credentials: true,
+    credentials: true, // allow cookies & Authorization headers
   })
 );
 
-// ✅ MongoDB connection
+// ✅ Body parsers
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// ✅ MongoDB Connection
 mongoose
   .connect(process.env.MONGO_URI)
   .then(() => console.log("✅ MongoDB Connected"))
@@ -39,15 +50,9 @@ mongoose
   });
 
 // ✅ Routes
-const authRoutes = require("./routes/auth.routes");
 app.use("/api/auth", authRoutes);
-
 app.use("/api/ai", aiRoutes);
-
-const giftRoutes = require("./routes/gift.routes");
 app.use("/api/gifts", giftRoutes);
-
-const chatRoutes = require("./routes/chat.routes");
 app.use("/api/chat", chatRoutes);
 
 // ✅ Health Check
